@@ -3,8 +3,12 @@
 set -euo pipefail
 # set -x
 
-TRASH="$HOME/.local/share/Trash"
-SCRIPT_PATH="$(readlink -f "$0" )"
+PATH=/usr/bin:/bin
+export PATH
+
+TRASH="${XDG_DATA_HOME:-$HOME/.local/share}/Trash"
+
+SCRIPT_PATH="$(cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
 
 usage() {
     echo "Usage:"
@@ -46,14 +50,29 @@ esac
 # Delete files 
 
 cleanup() {
-    find "$TRASH/files" -mindepth 1 -mmin +"$MINUTES" -exec rm -rf {} +
-    find "$TRASH/info" -mindepth  1 -mmin +"$MINUTES" -exec rm -f {} +
+    exec 9>"$TRASH/.cleanup.lock"
+    flock -n 9 || return 0
 
+    [[ -d "$TRASH/files" && -d "$TRASH/info" ]] || return 0
+
+    find "$TRASH/info" -type f -print0 |
+    while IFS= read -r -d '' info; do 
+        base="$(basename "$info" .trashinfo)"
+        deletion_date=$(grep '^DeletionDate=' "$info" | cut -d= -f2)
+        if [[ -z "$deletion_date" ]]; then continue; fi
+        deletion_epoch=$(date -d "$deletion_date" +%s)
+        now_epoch=$(date +%s)
+        age_minutes=$(( (now_epoch - deletion_epoch)/60 ))
+        if (( age_minutes > MINUTES )); then
+            rm -rf --one-file-system "$TRASH/files/$base" "$info"
+        fi
+    done
 }
 
 
 install_cron() {
-    ( crontab -l 2>/dev/null; echo "0 * * * * $SCRIPT_PATH $INPUT") | crontab -
+    crontab -l 2>/dev/null | grep -vF "$SCRIPT_PATH" |
+    { cat; printf '0 * * * * "%s" "%s"\n' "$SCRIPT_PATH" "$INPUT"; } | crontab -
 }
 
 install_systemd() {
@@ -73,7 +92,7 @@ EOF
 Description=Empty trash timer
 
 [Timer]
-OnCalendar=weekly
+OnUnitActiveSec=1h
 Persistent=true
 
 [Install]
