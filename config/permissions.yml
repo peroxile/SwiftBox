@@ -1,0 +1,77 @@
+permissions:
+
+  # Global kill switch. Set to true to block all actions immediately.
+  kill_switch: false
+
+  # When true, no action writes to the system. Logs and state still written.
+  global_dry_run: true
+
+  # Modes: dry-run | awareness | auto
+  # dry-run: plan only, no execution
+  # awareness: plan and surface, wait for confirmation
+  # auto: execute within allowed_actions, log everything
+  default_mode: awareness
+
+  roles:
+    system:
+      description: Internal SwiftBox engine
+      allowed_actions:
+        - disk.check_usage
+        - memory.check_usage
+        - process.check_load
+        - process.check_memory
+        - network.check_connectivity
+        - network.check_dns
+        - services.check_status
+      denied_actions: []
+
+    operator:
+      description: Trusted external caller (e.g. Telegram bot)
+      allowed_actions:
+        - disk.check_usage
+        - disk.clean_tmp
+        - network.check_connectivity
+        - network.restart_interface
+        - process.list
+        - process.kill_zombie
+        - services.check_status
+        - services.restart
+        - notify_only
+      denied_actions:
+        - disk.format
+        - disk.wipe
+        - system.reboot
+        - system.shutdown
+
+    readonly:
+      description: Observation only, no writes
+      allowed_actions:
+        - disk.check_usage
+        - network.check_connectivity
+        - network.check_dns
+        - services.check_status
+        - process.list
+      denied_actions: []
+
+  # Actions that always require explicit confirmation regardless of role or mode.
+  always_require_approval:
+    - system.reboot
+    - system.shutdown
+    - disk.format
+    - disk.wipe
+    - services.restart   # services with restart_max exceeded
+
+  # Actions that are unconditionally blocked.
+  permanently_blocked:
+    - disk.format
+    - disk.wipe
+    - system.shutdown
+
+  # Per-host overrides. Host name must match config/hosts/<name>.yml
+  host_overrides:
+    vps:
+      mode: awareness
+      safety_level: high
+      blocked_actions:
+        - system.reboot
+        - system.shutdown
