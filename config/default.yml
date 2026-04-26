@@ -1,0 +1,46 @@
+# Global fallback values for all SwiftBox host profiles.
+# Host-specific config (config/hosts/*.yml) overrides these.
+# Products should not modify this file — override at the host level.
+
+execution:
+  mode: awareness          # dry-run | awareness | auto
+  safety_level: high
+  dry_run: true
+  max_retries: 2
+  timeout_seconds: 60
+
+repo:
+  source: github
+  branch: main
+  verify_checksums: true
+
+notifications:
+  targets:
+    - stdout
+    - filelog
+  log_path: logs/swiftbox.log
+
+permissions:
+  default_role: operator
+  kill_switch: false
+  global_dry_run: true
+
+state:
+  dir: state
+  history_file: state/history.jsonl
+  last_actions_file: state/last_actions.json
+  cache_file: state/cache.json
+
+scripts:
+  base_dir: scripts
+  manifest_extension: .manifest.yml
+  allowed_extensions:
+    - .sh
+    - .py
+
+healthchecks:
+  config_path: config/healthchecks/server.yml
+
+verification:
+  enabled: true
+  fail_on_unverified: false  # log but do not abort if verify step finds no change
