@@ -1,0 +1,87 @@
+healthchecks:
+
+  disk:
+    - id: disk_usage_root
+      adapter: linux.disk
+      method: check_usage
+      args:
+        path: /
+      thresholds:
+        warn: 75       # percent
+        critical: 90
+      on_warn: disk.clean_tmp
+      on_critical: notify_only   # do not auto-clean at critical without approval
+
+    - id: disk_usage_var
+      adapter: linux.disk
+      method: check_usage
+      args:
+        path: /var
+      thresholds:
+        warn: 80
+        critical: 95
+      on_warn: disk.clean_tmp
+      on_critical: notify_only
+
+  memory:
+    - id: memory_usage
+      adapter: linux.process
+      method: check_memory
+      args: {}
+      thresholds:
+        warn: 80
+        critical: 95
+      on_warn: process.kill_zombie
+      on_critical: notify_only
+
+  network:
+    - id: external_connectivity
+      adapter: linux.network
+      method: check_connectivity
+      args:
+        target: 8.8.8.8
+        timeout: 5
+      on_fail: network.restart_interface
+
+    - id: dns_resolution
+      adapter: linux.network
+      method: check_dns
+      args:
+        target: google.com
+      on_fail: notify_only
+
+  services:
+    - id: service_nginx
+      adapter: linux.services
+      method: check_status
+      args:
+        name: nginx
+      on_fail: services.restart
+      restart_max: 2
+
+    - id: service_ssh
+      adapter: linux.services
+      method: check_status
+      args:
+        name: ssh
+      on_fail: notify_only      # never auto-restart ssh remotely
+
+    - id: service_cron
+      adapter: linux.services
+      method: check_status
+      args:
+        name: cron
+      on_fail: services.restart
+      restart_max: 1
+
+  cpu:
+    - id: cpu_load
+      adapter: linux.process
+      method: check_load
+      args:
+        window: 5m
+      thresholds:
+        warn: 2.0    # load average multiplier over core count
+        critical: 4.0
+      on_warn: process.list
+      on_critical: notify_only
