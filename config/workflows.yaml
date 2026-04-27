@@ -1,0 +1,75 @@
+workflows:
+
+  disk.clean_tmp:
+    id: disk.clean_tmp
+    description: Remove stale files from /tmp and /var/tmp
+    trigger: disk_usage_warn
+    safety_level: low
+    reversible: true
+    dry_run_safe: true
+    steps:
+      - script: scripts/fix/clean_tmp.sh
+        args:
+          older_than_days: 7
+          paths:
+            - /tmp
+            - /var/tmp
+    verify_after:
+      - disk.check_usage
+    on_failure: notify_only
+
+  network.restart_interface:
+    id: network.restart_interface
+    description: Restart the primary network interface
+    trigger: network_check_fail
+    safety_level: medium
+    reversible: true
+    dry_run_safe: false
+    requires_approval: false
+    steps:
+      - script: scripts/fix/restart_network.sh
+        args:
+          interface: auto       # resolved by adapter at runtime
+    verify_after:
+      - network.check_connectivity
+    on_failure: notify_only
+
+  services.restart:
+    id: services.restart
+    description: Restart a named system service
+    trigger: service_down
+    safety_level: medium
+    reversible: false
+    dry_run_safe: false
+    requires_approval: false
+    steps:
+      - script: scripts/fix/restart_service.sh
+        args:
+          name: "{{ service_name }}"  # injected at runtime
+    verify_after:
+      - services.check_status
+    on_failure: notify_only
+
+  process.kill_zombie:
+    id: process.kill_zombie
+    description: Reap zombie processes
+    trigger: memory_usage_warn
+    safety_level: low
+    reversible: false
+    dry_run_safe: true
+    steps:
+      - script: scripts/fix/kill_zombies.sh
+    verify_after:
+      - process.check_memory
+    on_failure: notify_only
+
+  notify_only:
+    id: notify_only
+    description: Record the issue and notify without acting
+    trigger: any
+    safety_level: none
+    reversible: true
+    dry_run_safe: true
+    steps: []
+    verify_after: []
+    on_failure: null
