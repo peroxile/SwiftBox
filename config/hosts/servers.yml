@@ -1,0 +1,50 @@
+host:
+  name: server
+  os_family: linux
+  shell: /bin/bash
+  package_manager: apt
+  user: root
+  timezone: UTC
+
+repo:
+  source: github
+  trusted_org: swiftbox-scripts
+  branch: main
+  verify_checksums: true
+
+execution:
+  mode: awareness
+  safety_level: high
+  max_retries: 2
+  timeout_seconds: 60
+  dry_run: true
+
+allowed_actions:
+  - disk.check_usage
+  - disk.clean_tmp
+  - network.check_connectivity
+  - network.check_dns
+  - process.list
+  - process.check_load
+  - process.check_memory
+  - services.check_status
+  - services.restart
+
+blocked_actions:
+  - disk.format
+  - disk.wipe
+  - system.reboot
+  - system.shutdown
+
+verification:
+  enabled: true
+  checks:
+    - disk.check_usage
+    - services.check_status
+    - network.check_connectivity
+
+notifications:
+  targets:
+    - stdout
+    - filelog
+  log_path: logs/server.log
