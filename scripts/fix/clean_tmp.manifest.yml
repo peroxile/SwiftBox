@@ -1,0 +1,12 @@
+id: disk.clean_tmp
+description: Remove stale files from /tmp and /var/tmp
+requires: [bash, find]
+args:
+  - name: older_than_days
+    type: int
+    default: 7
+  - name: dry_run
+    type: bool
+    default: true
+reversible: true
+safe_in_dry_run: true
