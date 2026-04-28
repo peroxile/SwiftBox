@@ -49,7 +49,9 @@ def load_workflows(path: str | Path) -> dict[str, WorkflowDef]:
 
 
 def load_permissions(path: str | Path) -> PermissionsConfig:
-    data = yaml.safe_load(Path(path).read_text())
+    raw = yaml.safe_load(Path(path).read_text())
+    inner = raw.get("permissions", {}) or {}
+    data = {**raw, **inner}
     roles = data.get("roles", {})
     return PermissionsConfig(
         kill_switch=data.get("kill_switch", False),

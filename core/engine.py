@@ -1,8 +1,8 @@
 """
 Coordinates the full SwiftBox loop:
   input -> normalize -> decide -> act -> state -> verify
-
-Entry point for external callers (e.g. a Telegram bot, CLI, or scheduler).
+  
+Entry point for external callers
 Does not contain policy — reads everything from config.
 """
 
@@ -95,7 +95,6 @@ def _notify_targets_for(host_config_path: Path) -> list[str]:
 
 # Notify dispatcher
 
-
 def _notify(records: list[StateRecord], targets: list[str], log_path: str) -> None:
     for target in targets:
         if target == "stdout":
@@ -107,6 +106,7 @@ def _notify(records: list[StateRecord], targets: list[str], log_path: str) -> No
 
 
 # Script executor
+
 
 def _execute_script(req: ActionRequest) -> ActionResult:
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -232,7 +232,7 @@ def _write_state(record: StateRecord, state_dir: Path) -> None:
         json.dump(serialized, f, indent=2)
 
 
-# Main engine loop
+# Full detect -> plan -> act -> verify loop
 
 def run(
     host_config_path: str | Path = "config/hosts/vps.yml",
@@ -249,7 +249,6 @@ def run(
     host_config_path = Path(host_config_path)
     state_dir = Path(state_dir)
 
-    # Load config
     host_config = load_host_config(host_config_path)
     checks = load_healthcheck_config(healthcheck_config_path)
     workflows = load_workflows(workflows_path)
@@ -262,7 +261,7 @@ def run(
         host_config.name, host_config.execution_mode, host_config.dry_run,
     )
 
-    # Detect
+    
     if host_config.ssh_config:
         logger.info("SSH mode: running checks remotely on %s", host_config.ssh_config.get("host"))
         from adapters.ssh.checks import run_ssh_checks
@@ -317,6 +316,7 @@ def run(
 
 # Single workflow dispatch
 # Used by products that already know what workflow to run.
+
 
 def run_workflow(
     workflow_id: str,

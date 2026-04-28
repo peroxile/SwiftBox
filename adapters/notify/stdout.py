@@ -50,7 +50,7 @@ def emit(record: StateRecord) -> None:
         passed = "passed" if verification.passed else "failed"
         lines.append(f"  verify  : {passed} — {verification.message}")
     elif action and not action.dry_run and action.status == ActionStatus.SUCCESS:
-        lines.append(f"  verify  : skipped")
+        lines.append("  verify  : skipped")
 
     print("\n".join(lines), file=sys.stdout, flush=True)
 
