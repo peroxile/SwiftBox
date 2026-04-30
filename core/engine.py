@@ -2,6 +2,7 @@
 Coordinates the full SwiftBox loop:
   input -> normalize -> decide -> act -> state -> verify
 
+Entry point for external callers
 Does not contain policy — reads everything from config.
 """
 
@@ -11,12 +12,10 @@ import json
 import logging
 import subprocess
 import time
+import yaml
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
-import yaml
-
 from core.detect import load_healthcheck_config, run_all_checks
 from core.plan import load_permissions, load_workflows, plan
 from core.schemas import (
@@ -83,6 +82,7 @@ def load_host_config(path: str | Path) -> HostConfig:
         repo_source=data.get("repo", {}).get("source"),
         repo_branch=data.get("repo", {}).get("branch", "main"),
         verify_checksums=data.get("repo", {}).get("verify_checksums", True),
+        ssh_config=data.get("ssh"),   # None for local hosts
     )
 
 
@@ -260,7 +260,12 @@ def run(
     )
 
     # Detect
-    issues = run_all_checks(checks, host_config.name)
+    if host_config.ssh_config:
+        logger.info("SSH mode: running checks remotely on %s", host_config.ssh_config.get("host"))
+        from adapters.ssh.checks import run_ssh_checks
+        issues = run_ssh_checks(host_config, checks)
+    else:
+        issues = run_all_checks(checks, host_config.name)
     actionable = [i for i in issues if i.status != CheckStatus.OK]
     logger.info("%d checks run, %d require attention", len(issues), len(actionable))
 
@@ -309,7 +314,6 @@ def run(
 
 # Single workflow dispatch
 # Used by products that already know what workflow to run.
-
 
 def run_workflow(
     workflow_id: str,
